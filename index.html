@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>System Console</title>
+
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin: 0;
+  background: #0a0a0a;
+  color: #00ff41;
+  font-family: 'VT323', monospace;
+  overflow: hidden;
+}
+
+/* scanlines */
+body::after {
+  content: "";
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    transparent,
+    transparent 2px,
+    rgba(0,255,65,0.03) 3px
+  );
+  pointer-events: none;
+}
+
+/* layout */
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+/* commands */
+.commands {
+  flex: 2;
+  padding: 40px;
+}
+
+.command {
+  font-size: 28px;
+  margin: 15px 0;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.command:hover {
+  text-shadow: 0 0 10px #00ff41;
+  text-decoration: underline;
+}
+
+/* error log */
+.errors {
+  flex: 1;
+  border-left: 1px solid #00ff41;
+  padding: 20px;
+}
+
+.error {
+  color: orange;
+  margin: 5px 0;
+}
+
+/* logs */
+.logs {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  max-height: 150px;
+  overflow: auto;
+  padding: 10px;
+  font-size: 18px;
+  border-top: 1px solid #00ff41;
+}
+
+/* modal */
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid #00ff41;
+  padding: 30px;
+  background: #000;
+  display: none;
+  text-align: center;
+}
+
+/* progress */
+.bar {
+  width: 300px;
+  height: 20px;
+  border: 1px solid #00ff41;
+  margin-top: 20px;
+}
+
+.fill {
+  height: 100%;
+  width: 0%;
+  background: #00ff41;
+}
+
+/* spinner */
+.spinner {
+  border: 4px solid #00ff41;
+  border-top: 4px solid transparent;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  margin: 20px auto;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+/* clear */
+.clear {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  cursor: pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="clear" onclick="clearScreen()">CLEAR SCREEN</div>
+
+<div class="container">
+
+  <div class="commands">
+    <div class="command" onclick="runCommand('Перезагрузка Системы')">> Перезагрузка Системы</div>
+    <div class="command" onclick="runCommand('Проверка системы')">> Проверка системы</div>
+    <div class="command" onclick="runCommand('Вентиляция')">> Вентиляция</div>
+    <div class="command" onclick="runCommand('Отключение питания')">> Отключение питания</div>
+  </div>
+
+  <div class="errors">
+    <h3>ЖУРНАЛ ОШИБОК [ACTIVE]</h3>
+    <div id="errorList"></div>
+  </div>
+
+</div>
+
+<div class="logs" id="logs"></div>
+
+<div class="modal" id="modal">
+  <div id="modalText"></div>
+  <div id="content"></div>
+</div>
+
+<script>
+let errors = [
+  "Ошибка вентиляции",
+  "Error 34: требуется перезагрузка",
+  "Перегрев процессора",
+  "Низкий уровень питания"
+];
+
+const errorList = document.getElementById("errorList");
+const logs = document.getElementById("logs");
+
+function renderErrors() {
+  errorList.innerHTML = "";
+  errors.forEach(e => {
+    const div = document.createElement("div");
+    div.className = "error";
+    div.textContent = e;
+    errorList.appendChild(div);
+  });
+}
+
+renderErrors();
+
+function log(msg) {
+  const time = new Date().toLocaleTimeString();
+  logs.innerHTML += `[${time}] ${msg}<br>`;
+  logs.scrollTop = logs.scrollHeight;
+}
+
+function runCommand(name) {
+  log("COMMAND EXECUTED: " + name);
+
+  const modal = document.getElementById("modal");
+  const text = document.getElementById("modalText");
+  const content = document.getElementById("content");
+
+  modal.style.display = "block";
+  text.innerText = `[EXECUTING...] [COMMAND: ${name}]`;
+  content.innerHTML = "";
+
+  if (name === "Проверка системы") {
+    const spin = document.createElement("div");
+    spin.className = "spinner";
+    content.appendChild(spin);
+
+    setTimeout(() => {
+      content.innerHTML = "";
+      if (Math.random() < 0.7) {
+        content.innerHTML = "Состояние стабильно ✓";
+      } else {
+        errors.push("Новая критическая ошибка");
+        renderErrors();
+        content.innerHTML = "Обнаружена ошибка!";
+      }
+    }, 10000);
+
+  } else {
+    const bar = document.createElement("div");
+    bar.className = "bar";
+
+    const fill = document.createElement("div");
+    fill.className = "fill";
+
+    bar.appendChild(fill);
+    content.appendChild(bar);
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 1;
+      fill.style.width = progress + "%";
+    }, 100);
+
+    setTimeout(() => {
+      clearInterval(interval);
+
+      // исправление ошибок
+      if (name === "Перезагрузка Системы") {
+        errors = errors.filter(e => !e.includes("Error 34") && !e.includes("перегрев"));
+      }
+
+      if (name === "Вентиляция") {
+        errors = errors.filter(e => !e.includes("вентиляции") && !e.includes("Перегрев"));
+      }
+
+      if (name === "Отключение питания") {
+        errors = errors.filter(e => !e.includes("питания"));
+      }
+
+      renderErrors();
+
+    }, 10000);
+  }
+
+  setTimeout(() => {
+    modal.style.display = "none";
+  }, 10000);
+}
+
+function clearScreen() {
+  logs.innerHTML = "";
+}
+</script>
+
+</body>
+</html>
